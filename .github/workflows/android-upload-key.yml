@@ -1,0 +1,64 @@
+# Creates the Android upload key for Google Play on GitHub's servers, so no computer is needed.
+# Run it ONCE from GitHub → Actions → "Create Android upload key" → Run workflow, then download the artifact
+# (it is deleted after 1 day). It holds the key file and a text file with the 4 values to paste into
+# Settings → Secrets and variables → Actions. Keep the downloaded files somewhere safe and private
+# (for example your own Google Drive): you need the same key for every future update of the app.
+name: Create Android upload key
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type YES to create a new key (only do this once, before your first Play upload)'
+        required: true
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  key:
+    runs-on: ubuntu-latest
+    if: inputs.confirm == 'YES'
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Create the key
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p out
+          PASS="$(openssl rand -base64 36 | tr -dc 'A-Za-z0-9' | head -c 32)"
+          echo "::add-mask::$PASS"
+          keytool -genkeypair -v -storetype PKCS12 -keystore out/upload.keystore -alias upload -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$PASS" -keypass "$PASS" -dname "CN=SI SOCIAL, O=SI SOCIAL, C=NG" >/dev/null 2>&1
+          SHA="$(keytool -list -v -keystore out/upload.keystore -storepass "$PASS" -alias upload | grep 'SHA256:' | sed 's/.*SHA256: //')"
+          {
+            echo "SI SOCIAL - Android upload key. KEEP THIS PRIVATE. Never paste it in a chat."
+            echo
+            echo "Add these 4 secrets on GitHub: Settings > Secrets and variables > Actions > New repository secret"
+            echo
+            echo "Name: ANDROID_KEY_ALIAS"
+            echo "Value: upload"
+            echo
+            echo "Name: ANDROID_KEYSTORE_PASSWORD"
+            echo "Value: $PASS"
+            echo
+            echo "Name: ANDROID_KEY_PASSWORD"
+            echo "Value: $PASS"
+            echo
+            echo "Name: ANDROID_KEYSTORE_BASE64"
+            echo "Value (one long line, copy all of it):"
+            base64 -w0 out/upload.keystore
+            echo
+            echo
+            echo "Upload key SHA-256 (for Render ANDROID_CERT_SHA256, together with the Play app signing one):"
+            echo "$SHA"
+          } > out/SECRETS-README.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-upload-key-PRIVATE
+          path: out/
+          retention-days: 1

@@ -1,0 +1,32 @@
+{
+  "appId": "fun.sisocial.app",
+  "appName": "SI SOCIAL",
+  "webDir": "www",
+  "backgroundColor": "#070710",
+  "server": {
+    "url": "https://sisocial.fun",
+    "errorPath": "offline.html",
+    "allowNavigation": ["sisocial.fun", "*.sisocial.fun", "*.daily.co", "*.dailywebrtc.com", "res.cloudinary.com"]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "contentInset": "always",
+    "limitsNavigationsToAppBoundDomains": false,
+    "scrollEnabled": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "launchAutoHide": true,
+      "backgroundColor": "#070710",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    },
+    "StatusBar": { "style": "DARK", "backgroundColor": "#070710", "overlaysWebView": false },
+    "PushNotifications": { "presentationOptions": ["badge", "sound", "alert"] }
+  }
+}

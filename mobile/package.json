@@ -1,0 +1,26 @@
+{
+  "name": "si-social-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "SI SOCIAL for Android and iOS (Capacitor). Loads https://sisocial.fun and adds native push, deep links, splash and offline handling.",
+  "scripts": {
+    "setup:android": "npx cap add android && node scripts/configure.mjs android && npm run assets",
+    "setup:ios": "npx cap add ios && node scripts/configure.mjs ios && npm run assets",
+    "assets": "capacitor-assets generate --iconBackgroundColor '#070710' --iconBackgroundColorDark '#070710' --splashBackgroundColor '#070710' --splashBackgroundColorDark '#070710' --assetPath resources",
+    "sync": "cap sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
+    "@capacitor/network": "^7.0.0",
+    "@capacitor/push-notifications": "^7.0.0",
+    "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/status-bar": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
+  }
+}
