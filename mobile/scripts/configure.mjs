@@ -1,7 +1,8 @@
 // After `npx cap add android|ios`: adds what the generated projects don't have by default.
 //   Android: App Links for sisocial.fun, camera (video posts and Reels), mic permission (Spaces), notification permission (Android 13+), an
 //            "ongoing call" service so calls keep their sound and microphone in the background,
-//            and "queries" so links can open the Phantom / Solflare apps for wallet approvals.
+//            "queries" so links can open the Phantom / Solflare apps for wallet approvals, and screen streaming
+//            for Mobile Gaming Live (MediaProjection + RTMP to the member's stream key).
 //   iOS:     Universal Links (associated domains), mic usage text, background audio for Spaces.
 import fs from 'node:fs';
 
@@ -40,8 +41,29 @@ if (platform === 'android') {
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />`);
   insertOnce(manifest, '</application>', `        <service android:name=".CallForegroundService" android:exported="false" android:foregroundServiceType="microphone|mediaPlayback" />`);
+  // Mobile Gaming Live: stream the phone's screen (MediaProjection) to the member's stream key over RTMP.
+  insertOnce(manifest, '<application', `    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />`);
+  insertOnce(manifest, '</application>', `        <service android:name=".ScreenStreamService" android:exported="false" android:foregroundServiceType="mediaProjection|microphone" />`);
+  // The RTMP encoder (RootEncoder, Apache 2.0) comes from JitPack.
+  const settings = fs.existsSync('android/settings.gradle') ? fs.readFileSync('android/settings.gradle', 'utf8') : '';
+  if (/dependencyResolutionManagement[\s\S]*repositories\s*\{/.test(settings)) {
+    if (!settings.includes('jitpack.io')) fs.writeFileSync('android/settings.gradle', settings.replace(/(dependencyResolutionManagement[\s\S]*?repositories\s*\{)/, "$1\n        maven { url 'https://jitpack.io' }"));
+  } else {
+    let root = fs.readFileSync('android/build.gradle', 'utf8');
+    if (!root.includes('jitpack.io')) {
+      if (!/allprojects\s*\{\s*repositories\s*\{/.test(root)) throw new Error('android/build.gradle: no allprojects.repositories block');
+      root = root.replace(/(allprojects\s*\{\s*repositories\s*\{)/, "$1\n        maven { url 'https://jitpack.io' }");
+      fs.writeFileSync('android/build.gradle', root);
+    }
+  }
+  const appGradle = 'android/app/build.gradle';
+  let ag = fs.readFileSync(appGradle, 'utf8');
+  if (!ag.includes('RootEncoder')) {
+    ag = ag.replace(/dependencies\s*\{/, (m) => `${m}\n    implementation "com.github.pedroSG94.RootEncoder:library:2.6.0"`);
+    fs.writeFileSync(appGradle, ag);
+  }
   const javaDir = 'android/app/src/main/java/fun/sisocial/app';
-  for (const f of ['CallForegroundService.java', 'CallServicePlugin.java']) fs.copyFileSync(`native/android/${f}`, `${javaDir}/${f}`);
+  for (const f of ['CallForegroundService.java', 'CallServicePlugin.java', 'ScreenStreamService.java', 'ScreenStreamPlugin.java']) fs.copyFileSync(`native/android/${f}`, `${javaDir}/${f}`);
   const main = `${javaDir}/MainActivity.java`;
   if (!fs.readFileSync(main, 'utf8').includes('CallServicePlugin')) {
     fs.writeFileSync(main, `package fun.sisocial.app;
@@ -53,6 +75,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(CallServicePlugin.class);
+        registerPlugin(ScreenStreamPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
