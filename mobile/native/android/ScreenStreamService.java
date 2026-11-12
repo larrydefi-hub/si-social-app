@@ -17,6 +17,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import androidx.core.app.NotificationCompat;
 import com.pedro.common.ConnectChecker;
+import com.pedro.common.socket.base.SocketType;
 import com.pedro.encoder.input.sources.audio.AudioSource;
 import com.pedro.encoder.input.sources.audio.MicrophoneSource;
 import com.pedro.encoder.input.sources.audio.MixAudioSource;
@@ -86,6 +87,9 @@ public class ScreenStreamService extends Service implements ConnectChecker {
             }, main);
 
             stream = new GenericStream(getApplicationContext(), this, new NoVideoSource(), new MicrophoneSource(MediaRecorder.AudioSource.DEFAULT));
+            // Plain Java sockets send the server name (SNI) on secure RTMPS connections; LiveKit's servers need it,
+            // otherwise the connection lands on the wrong server ("Unexpected EOF" during the handshake).
+            stream.getStreamClient().setSocketType(SocketType.JAVA);
             // The screen only produces frames when something changes; keep a steady frame rate for viewers.
             stream.getGlInterface().setForceRender(true, 30);
             boolean ok = stream.prepareVideo(1280, 720, kbps * 1000, 30, 2, landscape ? 0 : 90)

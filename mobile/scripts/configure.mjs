@@ -45,7 +45,7 @@ if (platform === 'android') {
   insertOnce(manifest, '<application', `    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />`);
   insertOnce(manifest, '</application>', `        <service android:name=".ScreenStreamService" android:exported="false" android:foregroundServiceType="mediaProjection|microphone" />`);
-  // The RTMP encoder (RootEncoder, Apache 2.0) comes from JitPack.
+  // The RTMP encoder (RootEncoder 2.8.2, Apache 2.0) comes from JitPack.
   const settings = fs.existsSync('android/settings.gradle') ? fs.readFileSync('android/settings.gradle', 'utf8') : '';
   if (/dependencyResolutionManagement[\s\S]*repositories\s*\{/.test(settings)) {
     if (!settings.includes('jitpack.io')) fs.writeFileSync('android/settings.gradle', settings.replace(/(dependencyResolutionManagement[\s\S]*?repositories\s*\{)/, "$1\n        maven { url 'https://jitpack.io' }"));
@@ -60,7 +60,7 @@ if (platform === 'android') {
   const appGradle = 'android/app/build.gradle';
   let ag = fs.readFileSync(appGradle, 'utf8');
   if (!ag.includes('RootEncoder')) {
-    ag = ag.replace(/dependencies\s*\{/, (m) => `${m}\n    implementation "com.github.pedroSG94.RootEncoder:library:2.6.0"`);
+    ag = ag.replace(/dependencies\s*\{/, (m) => `${m}\n    implementation "com.github.pedroSG94.RootEncoder:library:2.8.2"`);
     fs.writeFileSync(appGradle, ag);
   }
   const javaDir = 'android/app/src/main/java/fun/sisocial/app';
