@@ -46,6 +46,7 @@ public class ScreenStreamService extends Service implements ConnectChecker {
     private final Handler main = new Handler(Looper.getMainLooper());
     private String endpoint;
     private int retries = 0;
+    private ChatOverlay overlay;
 
     static boolean running() { return instance != null && instance.stream != null && instance.stream.isStreaming(); }
 
@@ -95,6 +96,13 @@ public class ScreenStreamService extends Service implements ConnectChecker {
             endpoint = url.endsWith("/") ? url + key : url + "/" + key;
             emit("connecting", "");
             stream.startStream(endpoint);
+            // Live chat floating over the game, if the member allowed "Display over other apps".
+            String streamId = intent.getStringExtra("streamId");
+            String base = intent.getStringExtra("base");
+            if (intent.getBooleanExtra("overlay", true) && streamId != null && base != null && ChatOverlay.allowed(this)) {
+                overlay = new ChatOverlay(this, base, streamId);
+                overlay.show();
+            }
         } catch (Exception e) {
             stopEverything("error", e.getMessage() == null ? "Couldn't start the stream" : e.getMessage());
         }
@@ -140,6 +148,8 @@ public class ScreenStreamService extends Service implements ConnectChecker {
     }
 
     private void stopEverything(String s, String msg) {
+        try { if (overlay != null) overlay.hide(); } catch (Exception ignored) {}
+        overlay = null;
         try { if (stream != null && stream.isStreaming()) stream.stopStream(); } catch (Exception ignored) {}
         try { if (stream != null) stream.release(); } catch (Exception ignored) {}
         stream = null;

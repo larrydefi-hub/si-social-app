@@ -18,7 +18,7 @@ import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
 /**
- * ScreenStream.start({ url, key, audio: 'mix' | 'mic' | 'game', landscape, kbps }) asks Android for permission to
+ * ScreenStream.start({ url, key, audio: 'mix' | 'mic' | 'game', landscape, kbps, streamId, base, overlay }) asks Android for permission to
  * record the screen, then streams it to the member's SI SOCIAL stream key. ScreenStream.stop() ends it.
  * ScreenStream.status() says whether it's running. Events: addListener('state', { state, message }) with
  * state = connecting | live | reconnecting | stopped | error.
@@ -73,11 +73,35 @@ public class ScreenStreamPlugin extends Plugin {
         i.putExtra("url", call.getString("url"));
         i.putExtra("key", call.getString("key"));
         i.putExtra("audio", call.getString("audio", "mix"));
+        i.putExtra("streamId", call.getString("streamId"));
+        i.putExtra("base", call.getString("base"));
+        i.putExtra("overlay", !Boolean.FALSE.equals(call.getBoolean("overlay", true)));
         i.putExtra("landscape", !Boolean.FALSE.equals(call.getBoolean("landscape", true)));
         Integer kbps = call.getInt("kbps", 2500);
         i.putExtra("kbps", kbps == null ? 2500 : Math.max(500, Math.min(6000, kbps)));
         try {
             if (Build.VERSION.SDK_INT >= 26) getContext().startForegroundService(i); else getContext().startService(i);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject(e.getMessage());
+        }
+    }
+
+    /** Is "Display over other apps" on (needed for the floating chat)? */
+    @PluginMethod
+    public void overlayAllowed(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("allowed", ChatOverlay.allowed(getContext()));
+        call.resolve(o);
+    }
+
+    /** Open Android's "Display over other apps" switch for SI SOCIAL. */
+    @PluginMethod
+    public void requestOverlay(PluginCall call) {
+        try {
+            Intent i = new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + getContext().getPackageName()));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
             call.resolve();
         } catch (Exception e) {
             call.reject(e.getMessage());

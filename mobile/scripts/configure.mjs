@@ -42,7 +42,8 @@ if (platform === 'android') {
     <uses-permission android:name="android.permission.WAKE_LOCK" />`);
   insertOnce(manifest, '</application>', `        <service android:name=".CallForegroundService" android:exported="false" android:foregroundServiceType="microphone|mediaPlayback" />`);
   // Mobile Gaming Live: stream the phone's screen (MediaProjection) to the member's stream key over RTMP.
-  insertOnce(manifest, '<application', `    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />`);
+  insertOnce(manifest, '<application', `    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />`);
   insertOnce(manifest, '</application>', `        <service android:name=".ScreenStreamService" android:exported="false" android:foregroundServiceType="mediaProjection|microphone" />`);
   // The RTMP encoder (RootEncoder, Apache 2.0) comes from JitPack.
   const settings = fs.existsSync('android/settings.gradle') ? fs.readFileSync('android/settings.gradle', 'utf8') : '';
@@ -63,7 +64,7 @@ if (platform === 'android') {
     fs.writeFileSync(appGradle, ag);
   }
   const javaDir = 'android/app/src/main/java/fun/sisocial/app';
-  for (const f of ['CallForegroundService.java', 'CallServicePlugin.java', 'ScreenStreamService.java', 'ScreenStreamPlugin.java']) fs.copyFileSync(`native/android/${f}`, `${javaDir}/${f}`);
+  for (const f of ['CallForegroundService.java', 'CallServicePlugin.java', 'ScreenStreamService.java', 'ScreenStreamPlugin.java', 'ChatOverlay.java']) fs.copyFileSync(`native/android/${f}`, `${javaDir}/${f}`);
   const main = `${javaDir}/MainActivity.java`;
   if (!fs.readFileSync(main, 'utf8').includes('CallServicePlugin')) {
     fs.writeFileSync(main, `package fun.sisocial.app;
