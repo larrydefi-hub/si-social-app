@@ -25,6 +25,7 @@ import com.pedro.encoder.input.sources.audio.InternalAudioSource;
 import com.pedro.encoder.input.sources.video.NoVideoSource;
 import com.pedro.encoder.input.sources.video.ScreenSource;
 import com.pedro.library.generic.GenericStream;
+import com.pedro.library.util.BitrateAdapter;
 
 /**
  * Mobile Gaming Live: streams this phone's screen (and the game's sound plus your mic, on Android 10+) to the member's
@@ -48,6 +49,7 @@ public class ScreenStreamService extends Service implements ConnectChecker {
     private String endpoint;
     private int retries = 0;
     private ChatOverlay overlay;
+    private BitrateAdapter adapter;
 
     static boolean running() { return instance != null && instance.stream != null && instance.stream.isStreaming(); }
 
@@ -76,7 +78,7 @@ public class ScreenStreamService extends Service implements ConnectChecker {
             String key = intent.getStringExtra("key");
             String audio = intent.getStringExtra("audio");
             boolean landscape = intent.getBooleanExtra("landscape", true);
-            int kbps = intent.getIntExtra("kbps", 2500);
+            int kbps = intent.getIntExtra("kbps", 2000);
             if (data == null || url == null || key == null) throw new IllegalArgumentException("Missing stream details");
 
             MediaProjectionManager mpm = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
@@ -96,6 +98,11 @@ public class ScreenStreamService extends Service implements ConnectChecker {
                 && stream.prepareAudio(44100, true, 128 * 1000, true, true);
             if (!ok) throw new IllegalStateException("This phone can't encode the stream at 720p");
             stream.changeVideoSource(new ScreenSource(getApplicationContext(), projection));
+            // Adaptive bitrate: when the upload can't keep up (weak data, busy Wi-Fi), lower the quality instead of
+            // letting video pile up and lag behind; raise it again when the connection recovers.
+            final int maxBitrate = kbps * 1000;
+            adapter = new BitrateAdapter(b -> { if (stream != null) stream.setVideoBitrateOnFly(Math.max(400_000, Math.min(maxBitrate, b))); });
+            adapter.setMaxBitrate(maxBitrate);
             stream.changeAudioSource(audioSource(audio));
             endpoint = url.endsWith("/") ? url + key : url + "/" + key;
             emit("connecting", "");
@@ -172,6 +179,11 @@ public class ScreenStreamService extends Service implements ConnectChecker {
     }
 
     // ── RTMP connection events ──
+    @Override public void onNewBitrate(long bitrate) {
+        try {
+            if (adapter != null && stream != null) adapter.adaptBitrate(bitrate, stream.getStreamClient().hasCongestion());
+        } catch (Exception ignored) {}
+    }
     @Override public void onConnectionStarted(String url) {}
     @Override public void onConnectionSuccess() { retries = 0; main.post(() -> emit("live", "")); }
     @Override public void onConnectionFailed(String reason) {

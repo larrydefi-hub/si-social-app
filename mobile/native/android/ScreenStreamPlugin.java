@@ -77,8 +77,8 @@ public class ScreenStreamPlugin extends Plugin {
         i.putExtra("base", call.getString("base"));
         i.putExtra("overlay", !Boolean.FALSE.equals(call.getBoolean("overlay", true)));
         i.putExtra("landscape", !Boolean.FALSE.equals(call.getBoolean("landscape", true)));
-        Integer kbps = call.getInt("kbps", 2500);
-        i.putExtra("kbps", kbps == null ? 2500 : Math.max(500, Math.min(6000, kbps)));
+        Integer kbps = call.getInt("kbps", 2000);
+        i.putExtra("kbps", kbps == null ? 2000 : Math.max(500, Math.min(6000, kbps)));
         try {
             if (Build.VERSION.SDK_INT >= 26) getContext().startForegroundService(i); else getContext().startService(i);
             call.resolve();
